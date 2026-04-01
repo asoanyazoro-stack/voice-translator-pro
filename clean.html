@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="google-admob-app-id" content="ca-app-pub-3940256099942544~3347511713">
+  <title>Voice Translator Pro</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #4338ca;
+      --accent: #10b981;
+      --bg: #f3f4f6;
+      --glass: rgba(255, 255, 255, 0.95);
+      --text-main: #111827;
+      --text-sub: #6b7280;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Inter', -apple-system, sans-serif; }
+
+    body { 
+      margin: 0; 
+      background: linear-gradient(135deg, #e0e7ff 0%, #f3f4f6 100%);
+      min-height: 100vh;
+      display: flex; 
+      justify-content: center; 
+      padding: 20px;
+    }
+
+    .app-container { 
+      width: 100%; 
+      max-width: 480px; 
+      background: var(--glass);
+      backdrop-filter: blur(10px);
+      border-radius: 32px; 
+      padding: 30px; 
+      box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+      border: 1px solid rgba(255,255,255,0.3);
+      height: fit-content;
+    }
+
+    .header { text-align: center; margin-bottom: 25px; }
+    .header h1 { margin: 0; font-size: 1.6rem; font-weight: 800; background: linear-gradient(to right, #4f46e5, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .header p { margin: 5px 0 0; font-size: 0.85rem; color: var(--text-sub); letter-spacing: 1px; text-transform: uppercase; }
+
+    .input-group { background: #fff; border-radius: 20px; border: 1px solid #e5e7eb; padding: 15px; margin-bottom: 20px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
+    
+    textarea { 
+      width: 100%; min-height: 120px; border: none; outline: none; 
+      font-size: 1.1rem; color: var(--text-main); resize: none; background: transparent;
+    }
+
+    .lang-card { 
+      display: grid; grid-template-columns: 1fr 40px 1fr; align-items: center; 
+      background: #f9fafb; border-radius: 16px; padding: 8px; margin-bottom: 20px;
+    }
+
+    select { 
+      width: 100%; border: none; background: transparent; padding: 10px;
+      font-weight: 600; color: var(--primary); font-size: 0.9rem; outline: none; cursor: pointer;
+    }
+
+    .btn-main { 
+      width: 100%; border: none; padding: 18px; border-radius: 20px; 
+      font-weight: 700; font-size: 1rem; cursor: pointer; color: white; 
+      transition: 0.3s; margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+
+    .btn-record { background: var(--primary); box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3); }
+    .btn-record.active { background: #ef4444; animation: pulse 1.5s infinite; }
+    
+    .secondary-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn-sub { background: #fff; color: var(--text-main); border: 1px solid #e5e7eb; padding: 12px; border-radius: 15px; font-weight: 600; font-size: 0.85rem; }
+
+    .result-area { 
+      margin-top: 25px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 24px; padding: 20px; border: 1px solid #e2e8f0; position: relative;
+    }
+    
+    .copy-toast { position: absolute; top: 10px; right: 10px; font-size: 0.7rem; color: var(--accent); font-weight: bold; display: none; }
+
+    .status-bar { text-align: center; font-size: 0.75rem; color: var(--text-sub); margin-bottom: 10px; font-weight: 500; }
+
+    @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { transform: scale(1.02); box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); } 100% { transform: scale(1); } }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <div class="header">
+    <h1>VOICE TRANSLATE</h1>
+    <p>Professional Edition</p>
+  </div>
+
+  <div class="input-group">
+    <textarea id="inputText" placeholder="Tap record or start typing..."></textarea>
+  </div>
+
+  <div class="lang-card">
+    <select id="srcLang"></select>
+    <span style="text-align: center; color: #cbd5e1;">⇄</span>
+    <select id="trgLang"></select>
+  </div>
+  
+  <div class="status-bar" id="statusMsg">Ready to translate</div>
+
+  <button id="micBtn" class="btn-main btn-record">
+    <span id="micIcon">🎤</span> <span id="micText">Record Voice</span>
+  </button>
+
+  <div class="secondary-btns">
+    <button id="transBtn" class="btn-sub" style="background: var(--accent); color: white; border: none;">Translate Text</button>
+    <button id="clearBtn" class="btn-sub">Clear All</button>
+  </div>
+
+  <div class="result-area">
+    <div class="copy-toast" id="copyToast">Copied!</div>
+    <div style="font-size: 0.7rem; color: var(--text-sub); text-transform: uppercase; margin-bottom: 10px;">Translation</div>
+    <div id="output" onclick="copyResult()" style="cursor: pointer;">...</div>
+  </div>
+</div>
+
+<script>
+  const langs = {"auto":"Detect","en":"English","es":"Spanish","fr":"French","de":"German","it":"Italian","ja":"Japanese","ko":"Korean","zh-CN":"Chinese","ar":"Arabic","hi":"Hindi","pt":"Portuguese","ru":"Russian","tr":"Turkish","vi":"Vietnamese","ig":"Igbo","yo":"Yoruba","ha":"Hausa"};
+
+  const srcSelect = document.getElementById('srcLang');
+  const trgSelect = document.getElementById('trgLang');
+  const micBtn = document.getElementById('micBtn');
+  const transBtn = document.getElementById('transBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const inputArea = document.getElementById('inputText');
+  const outputDiv = document.getElementById('output');
+  const statusMsg = document.getElementById('statusMsg');
+
+  Object.entries(langs).forEach(([code, name]) => {
+    srcSelect.add(new Option(name, code));
+    if(code !== "auto") trgSelect.add(new Option(name, code));
+  });
+  trgSelect.value = "en";
+
+  let recognition;
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new Speech();
+    recognition.onstart = () => {
+      micBtn.classList.add('active');
+      document.getElementById('micText').innerText = "Listening...";
+      statusMsg.innerText = "Listening to your voice...";
+    };
+    recognition.onresult = (event) => {
+      inputArea.value = event.results[0][0].transcript;
+      handleTranslation();
+    };
+    recognition.onerror = (e) => { statusMsg.innerText = "Error: " + e.error; stopMic(); };
+    recognition.onend = () => stopMic();
+  }
+
+  function stopMic() {
+    micBtn.classList.remove('active');
+    document.getElementById('micText').innerText = "Record Voice";
+    statusMsg.innerText = "Translation ready";
+  }
+
+  micBtn.onclick = () => {
+    if (micBtn.classList.contains('active')) { recognition.stop(); } 
+    else { 
+      recognition.lang = srcSelect.value === "auto" ? "en-US" : srcSelect.value; 
+      recognition.start(); 
+    }
+  };
+
+  function triggerAd() {
+    const testAdUnit = "ca-app-pub-3940256099942544/1033173712"; 
+    if (window.Android && window.Android.showInterstitialAd) {
+      window.Android.showInterstitialAd(testAdUnit);
+    }
+  }
+
+  async function handleTranslation() {
+    const text = inputArea.value.trim();
+    if (!text) return;
+    statusMsg.innerText = "Processing...";
+    try {
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${srcSelect.value}&tl=${trgSelect.value}&dt=t&q=${encodeURIComponent(text)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      outputDiv.innerText = data[0].map(i => i[0]).join("");
+      statusMsg.innerText = "Translation successful";
+      triggerAd(); 
+    } catch (e) { statusMsg.innerText = "Check connection"; }
+  }
+
+  function copyResult() {
+    const text = outputDiv.innerText;
+    if (text === "...") return;
+    navigator.clipboard.writeText(text);
+    const toast = document.getElementById('copyToast');
+    toast.style.display = "block";
+    setTimeout(() => toast.style.display = "none", 2000);
+  }
+
+  transBtn.onclick = handleTranslation;
+  clearBtn.onclick = () => { inputArea.value = ""; outputDiv.innerText = "..."; statusMsg.innerText = "Cleared"; };
+</script>
+</body>
+</html>
